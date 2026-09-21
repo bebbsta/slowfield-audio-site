@@ -1,0 +1,53 @@
+name: Deploy Slowfield Audio site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Fetch prepared site
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL 'https://sdmntprnortheu.oaiusercontent.com/files/00000000-9adc-81f4-9202-54e2311390ef/raw?se=2026-09-21T07%3A27%3A56Z&sp=r&sv=2026-02-06&sr=b&scid=48fa58c7-b595-56a7-a499-4a79c58aa595&skoid=56822d8b-6cfd-42ed-a00d-1452dca42036&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-20T21%3A42%3A26Z&ske=2026-09-21T21%3A42%3A26Z&sks=b&skv=2026-02-06&sig=EYo3KOpqQKv%2B6yPv/YeR8KVLqDNi4eyLrySqnMRf5Jg%3D' -o site.zip
+          mkdir -p public
+          unzip -q site.zip -d public
+          printf '%s\n' 'plugins.slowfieldaudio.com' > public/CNAME
+          touch public/.nojekyll
+          test -f public/index.html
+          test -f public/minimusmaximus_beta_product_page/index.html
+          test -f public/downloads/minimusmaximus/MinimusMaximus-2.12.7-Windows-Setup.exe
+          test -f public/downloads/minimusmaximus/MinimusMaximus-2.12.7-macOS.pkg
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
