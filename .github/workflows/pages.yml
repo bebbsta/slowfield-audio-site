@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -24,19 +25,82 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
 
-      - name: Fetch prepared site
+      - name: Restore latest published site
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p public
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=github-pages&per_page=100"
+          ARTIFACT_ID=$(curl -fsSL             -H "Authorization: Bearer ${GH_TOKEN}"             -H "Accept: application/vnd.github+json"             "${API}" | python3 -c 'import json,sys; d=json.load(sys.stdin); a=[x for x in d.get("artifacts",[]) if not x.get("expired")]; print(a[0]["id"] if a else "")')
+          if [ -z "${ARTIFACT_ID}" ]; then
+            echo "No previous Pages artifact found"
+            exit 1
+          fi
+          curl -fsSL             -H "Authorization: Bearer ${GH_TOKEN}"             -H "Accept: application/vnd.github+json"             "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID}/zip"             -o previous-pages.zip
+          mkdir -p previous-pages
+          unzip -q previous-pages.zip -d previous-pages
+          test -f previous-pages/artifact.tar
+          tar -xf previous-pages/artifact.tar -C public
+          printf '%s\n' 'plugins.slowfieldaudio.com' > public/CNAME
+          touch public/.nojekyll
+
+      - name: Add Perculator 0.7.4 installers
         shell: bash
         run: |
           set -euo pipefail
-          curl -fL 'https://sdmntprnortheu.oaiusercontent.com/files/00000000-751c-81f4-8298-d8bce1bb549c/raw?se=2026-09-21T19%3A47%3A10Z&sp=r&sv=2026-02-06&sr=b&scid=860d3712-5ec4-55dc-bb66-b7d2cea8eda2&skoid=56822d8b-6cfd-42ed-a00d-1452dca42036&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-21T09%3A52%3A19Z&ske=2026-09-22T09%3A52%3A19Z&sks=b&skv=2026-02-06&sig=i5GIGSSGLnpy7R5N1Npg6tGRXSQ3U1hqoI0Vx1XmV84%3D' -o site.zip
-          mkdir -p public
-          unzip -q site.zip -d public
-          printf '%s\n' 'plugins.slowfieldaudio.com' > public/CNAME
-          touch public/.nojekyll
+          mkdir -p public/downloads/perculator
+
+          MAC="public/downloads/perculator/Perculator-0.7.4-macOS-Universal.pkg"
+          WIN="public/downloads/perculator/Perculator-0.7.4-Windows-Setup.exe"
+
+          if [ ! -f "${MAC}" ]; then
+            curl -fL 'https://sdmntprnortheu.oaiusercontent.com/files/00000000-811c-81f4-be5c-0a4b11573604/raw?se=2026-09-21T20%3A03%3A13Z&sp=r&sv=2026-02-06&sr=b&scid=c4e94bfb-22e1-56ef-842b-6066dafa5bf4&skoid=56822d8b-6cfd-42ed-a00d-1452dca42036&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-21T16%3A05%3A26Z&ske=2026-09-22T16%3A05%3A26Z&sks=b&skv=2026-02-06&sig=BfMnxuZ2VYOyRefNUzRpXViL246KK6eKcr1uMYyT0s8%3D' -o mac.zip
+            unzip -q mac.zip -d public/downloads/perculator
+          fi
+
+          if [ ! -f "${WIN}" ]; then
+            curl -fL 'https://sdmntprdenmarkeast.oaiusercontent.com/files/00000000-898c-8210-ae48-d72555bb2c52/raw?se=2026-09-21T20%3A03%3A16Z&sp=r&sv=2026-02-06&sr=b&scid=8e4185d3-ff74-5582-aba4-fcb64337577c&skoid=56822d8b-6cfd-42ed-a00d-1452dca42036&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-21T05%3A54%3A52Z&ske=2026-09-22T05%3A54%3A52Z&sks=b&skv=2026-02-06&sig=QA40GDM1Xqw4t1GNkRVkEDjXfCUcBYfrUBVbt26T5EM%3D' -o win.zip
+            unzip -q win.zip -d public/downloads/perculator
+          fi
+
+          test -f "${MAC}"
+          test -f "${WIN}"
+
+      - name: Activate Perculator download buttons
+        shell: bash
+        run: |
+          set -euo pipefail
+          PAGE="public/perculator_beta_product_page/index.html"
+          test -f "${PAGE}"
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("public/perculator_beta_product_page/index.html")
+          s = p.read_text()
+          s = s.replace(
+              '<span class="btn primary disabled">Mac beta — preparing</span>',
+              '<a class="btn primary" href="/downloads/perculator/Perculator-0.7.4-macOS-Universal.pkg">Mac beta — download</a>'
+          )
+          s = s.replace(
+              '<span class="btn disabled">Windows beta — preparing</span>',
+              '<a class="btn" href="/downloads/perculator/Perculator-0.7.4-Windows-Setup.exe">Windows beta — download</a>'
+          )
+          p.write_text(s)
+          PY
+          grep -q 'Perculator-0.7.4-macOS-Universal.pkg' "${PAGE}"
+          grep -q 'Perculator-0.7.4-Windows-Setup.exe' "${PAGE}"
+
+      - name: Verify site
+        shell: bash
+        run: |
+          set -euo pipefail
           test -f public/index.html
-          test -f public/minimusmaximus_beta_product_page/index.html
-          test -f public/downloads/minimusmaximus/MinimusMaximus-2.12.7-Windows-Setup.exe
-          test -f public/downloads/minimusmaximus/MinimusMaximus-2.12.7-macOS.pkg
+          test -f public/plugins.html
+          test -f public/perculator_beta_product_page/index.html
+          test -f public/perculator_user_guide/index.html
+          test -f public/downloads/perculator/Perculator-0.7.4-macOS-Universal.pkg
+          test -f public/downloads/perculator/Perculator-0.7.4-Windows-Setup.exe
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
