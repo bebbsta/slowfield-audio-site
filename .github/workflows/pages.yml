@@ -28,7 +28,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fL 'https://sdmntprnortheu.oaiusercontent.com/files/00000000-9adc-81f4-9202-54e2311390ef/raw?se=2026-09-21T07%3A27%3A56Z&sp=r&sv=2026-02-06&sr=b&scid=48fa58c7-b595-56a7-a499-4a79c58aa595&skoid=56822d8b-6cfd-42ed-a00d-1452dca42036&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-20T21%3A42%3A26Z&ske=2026-09-21T21%3A42%3A26Z&sks=b&skv=2026-02-06&sig=EYo3KOpqQKv%2B6yPv/YeR8KVLqDNi4eyLrySqnMRf5Jg%3D' -o site.zip
+          curl -fL 'https://sdmntprdenmarkeast.oaiusercontent.com/files/00000000-eb2c-8210-9512-c0356a5085d1/raw?se=2026-09-21T07%3A32%3A41Z&sp=r&sv=2026-02-06&sr=b&scid=3f1dec45-7baa-5c12-942d-eb14cd776004&skoid=56822d8b-6cfd-42ed-a00d-1452dca42036&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-21T05%3A37%3A49Z&ske=2026-09-22T05%3A37%3A49Z&sks=b&skv=2026-02-06&sig=MSMsBKM7clqELigiNiyBqVga2tprPu6d87Iu8ijKENU%3D' -o site.zip
           mkdir -p public
           unzip -q site.zip -d public
           printf '%s\n' 'plugins.slowfieldaudio.com' > public/CNAME
