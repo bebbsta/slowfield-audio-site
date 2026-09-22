@@ -91,6 +91,35 @@ jobs:
           grep -q 'Perculator-0.7.4-macOS-Universal.pkg' "${PAGE}"
           grep -q 'Perculator-0.7.4-Windows-Setup.exe' "${PAGE}"
 
+      - name: Publish full-resolution Perculator artwork
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET="public/downloads/perculator/perculator-interface-full.jpg"
+          install -D -m 0644 assets/perculator-interface-full.jpg "${TARGET}"
+          python3 - <<'PY'
+          from pathlib import Path
+
+          old = "/downloads/perculator/perculator-interface.jpg"
+          new = "/downloads/perculator/perculator-interface-full.jpg"
+          changed = []
+          for page in Path("public").rglob("*.html"):
+              source = page.read_text()
+              updated = source.replace(old, new)
+              if updated != source:
+                  page.write_text(updated)
+                  changed.append(str(page))
+
+          required = {
+              "public/index.html",
+              "public/perculator_beta_product_page/index.html",
+          }
+          missing = required.difference(changed)
+          if missing:
+              raise SystemExit(f"Perculator artwork reference not updated in: {sorted(missing)}")
+          PY
+          cmp assets/perculator-interface-full.jpg "${TARGET}"
+
       - name: Verify site
         shell: bash
         run: |
@@ -101,6 +130,10 @@ jobs:
           test -f public/perculator_user_guide/index.html
           test -f public/downloads/perculator/Perculator-0.7.4-macOS-Universal.pkg
           test -f public/downloads/perculator/Perculator-0.7.4-Windows-Setup.exe
+          test -f public/downloads/perculator/perculator-interface-full.jpg
+          test "$(wc -c < public/downloads/perculator/perculator-interface-full.jpg)" -gt 500000
+          grep -q '/downloads/perculator/perculator-interface-full.jpg' public/index.html
+          grep -q '/downloads/perculator/perculator-interface-full.jpg' public/perculator_beta_product_page/index.html
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
