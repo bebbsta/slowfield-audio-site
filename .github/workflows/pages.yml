@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  actions: read
   pages: write
   id-token: write
 
@@ -25,24 +24,14 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
 
-      - name: Restore latest published site
+      - name: Restore current live site
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          rm -rf public
           mkdir -p public
-          API="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=github-pages&per_page=100"
-          ARTIFACT_ID=$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" "${API}" | python3 -c 'import json,sys; d=json.load(sys.stdin); a=[x for x in d.get("artifacts",[]) if not x.get("expired")]; print(a[0]["id"] if a else "")')
-          if [ -z "${ARTIFACT_ID}" ]; then
-            echo "No previous Pages artifact found"
-            exit 1
-          fi
-          curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID}/zip" -o previous-pages.zip
-          mkdir -p previous-pages
-          unzip -q previous-pages.zip -d previous-pages
-          test -f previous-pages/artifact.tar
-          tar -xf previous-pages/artifact.tar -C public
+          wget --quiet --mirror --page-requisites --adjust-extension --convert-links --no-parent --no-host-directories --directory-prefix=public https://plugins.slowfieldaudio.com/
+          test -f public/index.html
           printf '%s\n' 'plugins.slowfieldaudio.com' > public/CNAME
           touch public/.nojekyll
 
@@ -62,8 +51,6 @@ jobs:
         run: |
           set -euo pipefail
           test -f public/index.html
-          test -f public/plugins.html
-          test -f public/perculator_beta_product_page/index.html
           test -f public/motus_beta_product_page/index.html
 
       - name: Configure Pages
