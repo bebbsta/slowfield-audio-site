@@ -35,23 +35,46 @@ jobs:
           printf '%s\n' 'plugins.slowfieldaudio.com' > public/CNAME
           touch public/.nojekyll
 
-      - name: Publish expanded Motus product page
+      - name: Publish Motus product page at directory route
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p public/motus_beta_product_page
-          install -m 0644 motus_beta_product_page.html public/motus_beta_product_page/index.html
+          install -m 0644 motus_beta_product_page/index.html public/motus_beta_product_page/index.html
           test -s public/motus_beta_product_page/index.html
           grep -q 'Not another bank of LFOs' public/motus_beta_product_page/index.html
           grep -q 'Seven areas of motion' public/motus_beta_product_page/index.html
-          grep -q 'Built for sounds that need a life beyond the loop' public/motus_beta_product_page/index.html
 
-      - name: Verify preserved site
+      - name: Add Motus card to plugins index
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('public/index.html')
+          s = p.read_text(encoding='utf-8')
+          if 'motus_beta_product_page' not in s:
+              card = '''
+          <section id="motus-card" style="max-width:1180px;margin:32px auto;padding:0 24px;">
+            <a href="/motus_beta_product_page/" style="display:block;text-decoration:none;color:#211b14;background:#eee3cd;border:1px solid #bda77d;border-radius:18px;padding:26px;box-shadow:0 12px 30px rgba(65,48,28,.10);">
+              <div style="font-family:Baskerville,Georgia,serif;font-size:12px;letter-spacing:.26em;text-transform:uppercase;color:#80623d;margin-bottom:8px;">Generative movement processor · beta</div>
+              <div style="font-family:Baskerville,Georgia,serif;font-size:38px;letter-spacing:.14em;margin-bottom:8px;">MOTUS</div>
+              <div style="font-family:Baskerville,Georgia,serif;font-size:21px;margin-bottom:10px;">Sound in motion.</div>
+              <div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.6;color:#5b5143;max-width:850px;">A generative movement and spatial transformation processor for evolving pitch, filter, amplitude, pan, width and space as one connected behaviour.</div>
+              <div style="font-family:system-ui,sans-serif;font-size:13px;font-weight:700;margin-top:16px;">macOS · Windows · AU · VST3 · Explore Motus →</div>
+            </a>
+          </section>
+          '''
+              marker = '</main>' if '</main>' in s else '</body>'
+              s = s.replace(marker, card + '\n' + marker, 1)
+              p.write_text(s, encoding='utf-8')
+          assert 'motus_beta_product_page' in p.read_text(encoding='utf-8')
+
+      - name: Verify complete publication
         shell: bash
         run: |
           set -euo pipefail
           test -f public/index.html
           test -f public/motus_beta_product_page/index.html
+          grep -q 'motus_beta_product_page' public/index.html
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
